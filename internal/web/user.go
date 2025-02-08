@@ -1,28 +1,32 @@
 package web
 
 import (
+	"bluenote/internal/domain"
+	"bluenote/internal/service"
 	"fmt"
+	"net/http"
+
 	regexp "github.com/dlclark/regexp2"
 	"github.com/gin-gonic/gin"
-	"net/http"
-)
-
-const (
-	emailRegexPattern = "^\\w+([-+.]\\w+)*@\\w+([-.]\\w+)*\\.\\w+([-.]\\w+)*$"
-	// 和上面比起来，用 ` 看起来就比较清爽
-	passwordRegexPattern = `^(?=.*[A-Za-z])(?=.*\d)(?=.*[$@$!%*#?&])[A-Za-z\d$@$!%*#?&]{8,}$`
 )
 
 type UserHandler struct {
+	Service    *service.UserService
 	EmailRe    *regexp.Regexp
 	PasswordRe *regexp.Regexp
 }
 
-func NewUserHandler() *UserHandler {
+func NewUserHandler(Service *service.UserService) *UserHandler {
+	const (
+		emailRegexPattern = "^\\w+([-+.]\\w+)*@\\w+([-.]\\w+)*\\.\\w+([-.]\\w+)*$"
+		// 和上面比起来，用 ` 看起来就比较清爽
+		passwordRegexPattern = `^(?=.*[A-Za-z])(?=.*\d)(?=.*[$@$!%*#?&])[A-Za-z\d$@$!%*#?&]{8,}$`
+	)
 	EmailRe := regexp.MustCompile(emailRegexPattern, 0)
 	PasswordRe := regexp.MustCompile(passwordRegexPattern, 0)
 
 	return &UserHandler{
+		Service:    Service,
 		EmailRe:    EmailRe,
 		PasswordRe: PasswordRe,
 	}
@@ -73,8 +77,17 @@ func (h *UserHandler) SignUp(ctx *gin.Context) {
 	}
 
 	//写入数据库
+	err = h.Service.SignUp(ctx, domain.User{
+		Email:    req.Email,
+		Password: req.Password,
+	})
+	if err != nil {
+		ctx.String(200, "系统异常")
+		return
+	}
 	ctx.String(200, "注册成功")
 	fmt.Printf("%v\n", req)
+
 }
 
 func (h *UserHandler) Login(ctx *gin.Context) {
