@@ -5,38 +5,36 @@ import (
 	"bluenote/internal/repository/dao"
 	"bluenote/internal/service"
 	"bluenote/internal/web"
+	"bluenote/internal/web/middleware"
+	"github.com/gin-contrib/cors"
+	"github.com/gin-contrib/sessions"
+	"github.com/gin-contrib/sessions/cookie"
+	"github.com/gin-gonic/gin"
 	"gorm.io/driver/mysql"
+	_ "gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"log"
 	"strings"
 	"time"
-
-	"github.com/gin-contrib/cors"
-	"github.com/gin-gonic/gin"
-	_ "gorm.io/driver/mysql"
 )
 
 func main() {
 	db := InitDB()
 	server := InitWebServer()
 
+	// session
+	store := cookie.NewStore([]byte("secret"))
+	login := middleware.NewLoginMiddlewareBuilder()
+	server.Use(sessions.Sessions("sess", store), login.CheckLogin())
+
 	c := initUser(db)
 
 	c.RegisterRoutes(server)
-
 	err := server.Run(":8080")
 	if err != nil {
 		log.Panic(err)
 	}
 
-}
-
-func initUser(db *gorm.DB) *web.UserHandler {
-	ud := dao.NewUserDAO(db)
-	repo := repository.NewUserRepository(ud)
-	svc := service.NewUserService(repo)
-	c := web.NewUserHandler(svc)
-	return c
 }
 
 func InitDB() *gorm.DB {
@@ -68,4 +66,12 @@ func InitWebServer() *gin.Engine {
 		},
 	}))
 	return server
+}
+
+func initUser(db *gorm.DB) *web.UserHandler {
+	ud := dao.NewUserDAO(db)
+	repo := repository.NewUserRepository(ud)
+	svc := service.NewUserService(repo)
+	c := web.NewUserHandler(svc)
+	return c
 }

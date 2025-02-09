@@ -3,12 +3,18 @@ package web
 import (
 	"bluenote/internal/domain"
 	"bluenote/internal/service"
+	"errors"
 	"fmt"
 	"net/http"
+	"time"
 
 	regexp "github.com/dlclark/regexp2"
+	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 )
+
+var ErrUserDuplicateEmail = service.ErrUserDuplicateEmail
+var ErrInvalidUserOrPassword = service.ErrInvalidUserOrPassword
 
 type UserHandler struct {
 	Service    *service.UserService
@@ -41,7 +47,25 @@ func (h *UserHandler) RegisterRoutes(server *gin.Engine) {
 }
 
 func (h *UserHandler) Profile(ctx *gin.Context) {
-	ctx.String(200, "user profile")
+	sess := sessions.Default(ctx)
+	sessVal := sess.Get("userId")
+	if sessVal != nil {
+		user, err := h.Service.Profile(ctx, domain.User{
+			ID: sessVal.(int64),
+		})
+		if err != nil {
+			ctx.String(200, "系统错误")
+			return
+		}
+		birthday := time.Unix(user.Birthday, 0).Format("2006-01-02")
+		ctx.JSON(200, gin.H{
+			"Nickname": user.Nickname,
+			"Email":    user.Email,
+			"Phone":    user.Phone,
+			"Birthday": birthday,
+			"AboutMe":  user.AboutMe,
+		})
+	}
 }
 
 func (h *UserHandler) SignUp(ctx *gin.Context) {
@@ -81,8 +105,11 @@ func (h *UserHandler) SignUp(ctx *gin.Context) {
 		Email:    req.Email,
 		Password: req.Password,
 	})
+	if errors.Is(err, ErrUserDuplicateEmail) {
+		ctx.String(200, "邮箱冲突")
+	}
 	if err != nil {
-		ctx.String(200, "系统异常")
+		//ctx.String(200, "系统异常")
 		return
 	}
 	ctx.String(200, "注册成功")
@@ -91,9 +118,63 @@ func (h *UserHandler) SignUp(ctx *gin.Context) {
 }
 
 func (h *UserHandler) Login(ctx *gin.Context) {
-	ctx.String(200, "login")
+	type LoginReq struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+	var req LoginReq
+	err := ctx.Bind(&req)
+	if err != nil {
+		return
+	}
+	user, err := h.Service.Login(ctx, domain.User{
+		Email:    req.Email,
+		Password: req.Password,
+	})
+	if errors.Is(err, ErrInvalidUserOrPassword) {
+		ctx.String(200, "用户名或密码错误")
+		return
+	}
+	if err != nil {
+		ctx.String(200, "系统错误")
+		return
+	}
+
+	sess := sessions.Default(ctx)
+	sess.Set("userId", user.ID)
+	err = sess.Save()
+	if err != nil {
+		ctx.String(200, "系统错误")
+		return
+	}
+	ctx.String(200, "登录成功")
+	return
 }
 
+// {nickname: "1", birthday: "2025-02-09", aboutMe: "1"}
 func (h *UserHandler) Edit(ctx *gin.Context) {
-	ctx.String(200, "edit")
+	type editReq struct {
+		Nickname string `json:"nickname"`
+		Birthday string `json:"birthday"`
+		AboutMe  string `json:"aboutMe"`
+	}
+	var req editReq
+	ctx.Bind(&req)
+
+	sess := sessions.Default(ctx)
+	sessVal := sess.Get("userId")
+
+	parse, _ := time.Parse("2006-01-02", req.Birthday)
+	birthday := parse.Unix()
+	err := h.Service.Edit(ctx, domain.User{
+		ID:       sessVal.(int64),
+		Nickname: req.Nickname,
+		Birthday: birthday,
+		AboutMe:  req.AboutMe,
+	})
+	if err != nil {
+		ctx.String(200, err.Error())
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{"code": 0, "msg": "修改成功"})
 }

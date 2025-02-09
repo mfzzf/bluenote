@@ -20,3 +20,21 @@ func (repo *UserRepository) Create(ctx context.Context, u domain.User) error {
 		Password: u.Password,
 	})
 }
+
+func (repo *UserRepository) FindByEmail(ctx context.Context, u domain.User) (domain.User, error) {
+	u, err := repo.dao.FindByEmail(ctx, u)
+	return u, err
+}
+
+func (repo *UserRepository) FindById(ctx context.Context, u domain.User) (domain.User, error) {
+	u, err := repo.dao.FindById(ctx, u)
+	return u, err
+}
+
+func (repo *UserRepository) EditById(ctx context.Context, u domain.User) error {
+	err := repo.dao.EditById(ctx, u)
+	if err != nil {
+		return err
+	}
+	return nil
+}

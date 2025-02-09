@@ -1,10 +1,13 @@
 package domain
 
-import "time"
-
 // User 领域对象
 type User struct {
+	ID          int64
 	Email       string
 	Password    string
-	CreatedTime time.Time
+	CreatedTime int64
+	Nickname    string
+	Phone       string
+	Birthday    int64
+	AboutMe     string
 }
