@@ -8,7 +8,7 @@ import (
 	"bluenote/internal/web/middleware"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/sessions"
-	"github.com/gin-contrib/sessions/cookie"
+	"github.com/gin-contrib/sessions/redis"
 	"github.com/gin-gonic/gin"
 	"gorm.io/driver/mysql"
 	_ "gorm.io/driver/mysql"
@@ -23,14 +23,19 @@ func main() {
 	server := InitWebServer()
 
 	// session
-	store := cookie.NewStore([]byte("secret"))
-	login := middleware.NewLoginMiddlewareBuilder()
+	store, err := redis.NewStore(16, "tcp", "localhost:6379", "", []byte("abW5nQhlwukKm7gx/BfB2w=="), []byte("ZaQqleZrLOznZnKsZdB5FQ=="))
+	if err != nil {
+		log.Panic(err)
+	}
+
+	// check login
+	login := middleware.NewLoginJWTMiddlewareBuilder()
 	server.Use(sessions.Sessions("sess", store), login.CheckLogin())
 
 	c := initUser(db)
 
 	c.RegisterRoutes(server)
-	err := server.Run(":8080")
+	err = server.Run(":8080")
 	if err != nil {
 		log.Panic(err)
 	}
@@ -52,7 +57,7 @@ func InitDB() *gorm.DB {
 func InitWebServer() *gin.Engine {
 	server := gin.Default()
 	server.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:3000"}, // 替换为你的前端地址
+		AllowOrigins:     []string{"http://localhost:3000"}, // 替换为前端地址
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
 		ExposeHeaders:    []string{"x-jwt-token"},

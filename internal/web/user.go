@@ -5,12 +5,13 @@ import (
 	"bluenote/internal/service"
 	"errors"
 	"fmt"
-	"net/http"
-	"time"
-
 	regexp "github.com/dlclark/regexp2"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
+	jwt "github.com/golang-jwt/jwt/v5"
+	"net/http"
+	"time"
+	"unicode/utf8"
 )
 
 var ErrUserDuplicateEmail = service.ErrUserDuplicateEmail
@@ -42,7 +43,7 @@ func (h *UserHandler) RegisterRoutes(server *gin.Engine) {
 	userGroup := server.Group("/users")
 	userGroup.GET("/profile", h.Profile)
 	userGroup.POST("/signup", h.SignUp)
-	userGroup.POST("/login", h.Login)
+	userGroup.POST("/login", h.LoginJWT)
 	userGroup.POST("/edit", h.Edit)
 }
 
@@ -142,6 +143,59 @@ func (h *UserHandler) Login(ctx *gin.Context) {
 
 	sess := sessions.Default(ctx)
 	sess.Set("userId", user.ID)
+	sess.Options(
+		sessions.Options{
+			Secure:   false,
+			HttpOnly: false,
+			MaxAge:   86400,
+		})
+	err = sess.Save()
+	if err != nil {
+		ctx.String(200, "系统错误")
+		return
+	}
+	ctx.String(200, "登录成功")
+	return
+}
+
+func (h *UserHandler) LoginJWT(ctx *gin.Context) {
+	type LoginReq struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+	var req LoginReq
+	err := ctx.Bind(&req)
+	if err != nil {
+		return
+	}
+	user, err := h.Service.Login(ctx, domain.User{
+		Email:    req.Email,
+		Password: req.Password,
+	})
+	if errors.Is(err, ErrInvalidUserOrPassword) {
+		ctx.String(200, "用户名或密码错误")
+		return
+	}
+	if err != nil {
+		ctx.String(200, "系统错误")
+		return
+	}
+
+	token := jwt.New(jwt.SigningMethodHS512)
+	signedString, err := token.SignedString([]byte("abW5nQhlwukKm7gx/BfB2w=="))
+	if err != nil {
+		ctx.String(http.StatusInternalServerError, "系统错误")
+		return
+	}
+	ctx.Header("x-jwt-token", signedString)
+	sess := sessions.Default(ctx)
+	sess.Set("userId", user.ID)
+	sess.Options(
+		sessions.Options{
+			Secure:   false,
+			HttpOnly: false,
+			MaxAge:   86400,
+		})
 	err = sess.Save()
 	if err != nil {
 		ctx.String(200, "系统错误")
@@ -159,22 +213,60 @@ func (h *UserHandler) Edit(ctx *gin.Context) {
 		AboutMe  string `json:"aboutMe"`
 	}
 	var req editReq
-	ctx.Bind(&req)
+	err := ctx.Bind(&req)
+	if err != nil {
+		ctx.String(http.StatusBadRequest, "请求参数错误")
+		return
+	}
+
+	// Validate nickname length (e.g., must be between 2 and 20 characters)
+	if utf8.RuneCountInString(req.Nickname) < 2 || utf8.RuneCountInString(req.Nickname) > 20 {
+		ctx.String(http.StatusBadRequest, "昵称长度必须在2到20之间")
+		return
+	}
+
+	// Validate about-me length (e.g., maximum 150 characters)
+	if utf8.RuneCountInString(req.AboutMe) > 150 {
+		ctx.String(http.StatusBadRequest, "个人简介不能超过150字符")
+		return
+	}
+
+	// Validate birthday format
+	parse, err := time.Parse("2006-01-02", req.Birthday)
+	if err != nil {
+		ctx.String(http.StatusBadRequest, "无效的生日格式, 期望格式YYYY-MM-DD")
+		return
+	}
+	birthday := parse.Unix()
 
 	sess := sessions.Default(ctx)
 	sessVal := sess.Get("userId")
+	if sessVal == nil {
+		ctx.String(http.StatusUnauthorized, "请先登录")
+		return
+	}
 
-	parse, _ := time.Parse("2006-01-02", req.Birthday)
-	birthday := parse.Unix()
-	err := h.Service.Edit(ctx, domain.User{
+	err = h.Service.Edit(ctx, domain.User{
 		ID:       sessVal.(int64),
 		Nickname: req.Nickname,
 		Birthday: birthday,
 		AboutMe:  req.AboutMe,
 	})
 	if err != nil {
-		ctx.String(200, err.Error())
+		ctx.String(http.StatusBadRequest, err.Error())
 		return
 	}
 	ctx.JSON(http.StatusOK, gin.H{"code": 0, "msg": "修改成功"})
+}
+
+func (h *UserHandler) Logout(ctx *gin.Context) {
+	sess := sessions.Default(ctx)
+	sess.Options(
+		sessions.Options{
+			MaxAge: -1,
+		})
+	err := sess.Save()
+	if err != nil {
+		return
+	}
 }
