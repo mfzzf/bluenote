@@ -23,6 +23,11 @@ type UserHandler struct {
 	PasswordRe *regexp.Regexp
 }
 
+type UserClaims struct {
+	jwt.RegisteredClaims
+	UserID int64
+}
+
 func NewUserHandler(Service *service.UserService) *UserHandler {
 	const (
 		emailRegexPattern = "^\\w+([-+.]\\w+)*@\\w+([-.]\\w+)*\\.\\w+([-.]\\w+)*$"
@@ -41,7 +46,7 @@ func NewUserHandler(Service *service.UserService) *UserHandler {
 
 func (h *UserHandler) RegisterRoutes(server *gin.Engine) {
 	userGroup := server.Group("/users")
-	userGroup.GET("/profile", h.Profile)
+	userGroup.GET("/profile", h.ProfileJWT)
 	userGroup.POST("/signup", h.SignUp)
 	userGroup.POST("/login", h.LoginJWT)
 	userGroup.POST("/edit", h.Edit)
@@ -53,6 +58,31 @@ func (h *UserHandler) Profile(ctx *gin.Context) {
 	if sessVal != nil {
 		user, err := h.Service.Profile(ctx, domain.User{
 			ID: sessVal.(int64),
+		})
+		if err != nil {
+			ctx.String(200, "系统错误")
+			return
+		}
+		birthday := time.Unix(user.Birthday, 0).Format("2006-01-02")
+		ctx.JSON(200, gin.H{
+			"Nickname": user.Nickname,
+			"Email":    user.Email,
+			"Phone":    user.Phone,
+			"Birthday": birthday,
+			"AboutMe":  user.AboutMe,
+		})
+	}
+}
+func (h *UserHandler) ProfileJWT(ctx *gin.Context) {
+	userID, exists := ctx.Get("userID")
+	if !exists {
+		ctx.String(200, "系统错误")
+		return
+	}
+	userID = userID.(int64)
+	if userID != nil {
+		user, err := h.Service.Profile(ctx, domain.User{
+			ID: userID.(int64),
 		})
 		if err != nil {
 			ctx.String(200, "系统错误")
@@ -181,26 +211,18 @@ func (h *UserHandler) LoginJWT(ctx *gin.Context) {
 		return
 	}
 
-	token := jwt.New(jwt.SigningMethodHS512)
+	claims := UserClaims{
+		RegisteredClaims: jwt.RegisteredClaims{},
+		UserID:           user.ID,
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
 	signedString, err := token.SignedString([]byte("abW5nQhlwukKm7gx/BfB2w=="))
 	if err != nil {
 		ctx.String(http.StatusInternalServerError, "系统错误")
 		return
 	}
 	ctx.Header("x-jwt-token", signedString)
-	sess := sessions.Default(ctx)
-	sess.Set("userId", user.ID)
-	sess.Options(
-		sessions.Options{
-			Secure:   false,
-			HttpOnly: false,
-			MaxAge:   86400,
-		})
-	err = sess.Save()
-	if err != nil {
-		ctx.String(200, "系统错误")
-		return
-	}
+
 	ctx.String(200, "登录成功")
 	return
 }

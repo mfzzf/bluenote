@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"bluenote/internal/web"
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"net/http"
@@ -21,21 +22,25 @@ func (m *LoginJWTMiddlewareBuilder) CheckLogin() gin.HandlerFunc {
 			// 不需要登录校验
 			return
 		}
+
 		Authorization := ctx.GetHeader("Authorization")
 		if Authorization == "" {
 			ctx.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
 		segs := strings.Split(Authorization, " ")
-		token, err := jwt.Parse(segs[1], func(token *jwt.Token) (interface{}, error) {
+		claims := &web.UserClaims{}
+		token, err := jwt.ParseWithClaims(segs[1], claims, func(token *jwt.Token) (interface{}, error) {
 			return []byte("abW5nQhlwukKm7gx/BfB2w=="), nil
 		})
 		if err != nil {
 			ctx.AbortWithStatus(http.StatusUnauthorized)
+			return
 		}
-		if !token.Valid {
+		if !token.Valid || token == nil {
 			ctx.AbortWithStatus(http.StatusUnauthorized)
+			return
 		}
-
+		ctx.Set("userID", claims.UserID)
 	}
 }
