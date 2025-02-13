@@ -6,9 +6,12 @@ import (
 	"bluenote/internal/service"
 	"bluenote/internal/web"
 	"bluenote/internal/web/middleware"
+	ratelimit "bluenote/pkg/ginx/middlewares"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/sessions"
-	"github.com/gin-contrib/sessions/redis"
+	redisSess "github.com/gin-contrib/sessions/redis"
+	"github.com/redis/go-redis/v9"
+
 	"github.com/gin-gonic/gin"
 	"gorm.io/driver/mysql"
 	_ "gorm.io/driver/mysql"
@@ -23,19 +26,11 @@ func main() {
 	server := InitWebServer()
 
 	// session
-	store, err := redis.NewStore(16, "tcp", "localhost:6379", "", []byte("abW5nQhlwukKm7gx/BfB2w=="), []byte("ZaQqleZrLOznZnKsZdB5FQ=="))
-	if err != nil {
-		log.Panic(err)
-	}
-
-	// check login
-	login := middleware.NewLoginJWTMiddlewareBuilder()
-	server.Use(sessions.Sessions("sess", store), login.CheckLogin())
 
 	c := initUser(db)
 
 	c.RegisterRoutes(server)
-	err = server.Run(":8080")
+	err := server.Run(":8080")
 	if err != nil {
 		log.Panic(err)
 	}
@@ -70,6 +65,15 @@ func InitWebServer() *gin.Engine {
 			return strings.Contains(origin, "yourcompany.com")
 		},
 	}))
+	store, err := redisSess.NewStore(16, "tcp", "localhost:6379", "", []byte("abW5nQhlwukKm7gx/BfB2w=="), []byte("ZaQqleZrLOznZnKsZdB5FQ=="))
+	if err != nil {
+		log.Panic(err)
+	}
+	// check login
+	login := middleware.NewLoginJWTMiddlewareBuilder()
+	server.Use(sessions.Sessions("sess", store), login.CheckLogin())
+	redisClient := redis.NewClient(&redis.Options{Addr: "localhost:6379"})
+	server.Use(ratelimit.NewBuilder(redisClient, time.Second, 100).Build())
 	return server
 }
 

@@ -1,0 +1,37 @@
+:root {
+  --primary-color: #ff2442;
+  --secondary-color: #ff4d6d;
+  --background-gradient: linear-gradient(45deg, #ff2442, #ff4d6d);
+}
+
+.redbook-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+}
+
+.redbook-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.redbook-button {
+  background: var(--background-gradient) !important;
+  border: none !important;
+  border-radius: 24px !important;
+  height: 44px !important;
+  font-size: 16px !important;
+  font-weight: 500 !important;
+  transition: all 0.3s ease !important;
+}
+
+.redbook-button:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.redbook-input {
+  border-radius: 8px !important;
+  height: 44px !important;
+}

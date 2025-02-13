@@ -41,6 +41,11 @@ func (m *LoginJWTMiddlewareBuilder) CheckLogin() gin.HandlerFunc {
 			ctx.AbortWithStatus(http.StatusUnauthorized)
 			return
 		}
-		ctx.Set("userID", claims.UserID)
+		if claims.UserAgent != ctx.Request.UserAgent() {
+			// TODO: 添加日志，表明账号可能不安全
+			ctx.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
+		ctx.Set("user", claims)
 	}
 }

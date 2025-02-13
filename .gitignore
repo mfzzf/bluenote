@@ -1,2 +1,35 @@
-./.idea/
-.gitignore
+# IDE
+/.idea/
+/.vscode/
+
+# OS generated files
+.DS_Store
+
+# Go build artifacts
+/bin/
+/pkg/
+/vendor/
+
+# Compiled binary files
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Log files
+*.log
+*.tmp
+
+# Docker Compose file (if not needed in version control)
+docker-compose.yaml
+
+# Node.js/Next.js artifacts in bluenote-fe
+/bluenote-fe/node_modules/
+/bluenote-fe/.next/
+/bluenote-fe/build/
+/bluenote-fe/dist/
+/bluenote-fe/.eslintcache
+
+# Others
+*.swp

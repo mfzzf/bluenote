@@ -5,13 +5,14 @@ import (
 	"bluenote/internal/service"
 	"errors"
 	"fmt"
+	"net/http"
+	"time"
+	"unicode/utf8"
+
 	regexp "github.com/dlclark/regexp2"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 	jwt "github.com/golang-jwt/jwt/v5"
-	"net/http"
-	"time"
-	"unicode/utf8"
 )
 
 var ErrUserDuplicateEmail = service.ErrUserDuplicateEmail
@@ -25,7 +26,8 @@ type UserHandler struct {
 
 type UserClaims struct {
 	jwt.RegisteredClaims
-	UserID int64
+	UserID    int64
+	UserAgent string
 }
 
 func NewUserHandler(Service *service.UserService) *UserHandler {
@@ -46,7 +48,7 @@ func NewUserHandler(Service *service.UserService) *UserHandler {
 
 func (h *UserHandler) RegisterRoutes(server *gin.Engine) {
 	userGroup := server.Group("/users")
-	userGroup.GET("/profile", h.ProfileJWT)
+	userGroup.GET("/profile", h.Profile)
 	userGroup.POST("/signup", h.SignUp)
 	userGroup.POST("/login", h.LoginJWT)
 	userGroup.POST("/edit", h.Edit)
@@ -74,15 +76,15 @@ func (h *UserHandler) Profile(ctx *gin.Context) {
 	}
 }
 func (h *UserHandler) ProfileJWT(ctx *gin.Context) {
-	userID, exists := ctx.Get("userID")
+	user, exists := ctx.Get("user")
 	if !exists {
 		ctx.String(200, "系统错误")
 		return
 	}
-	userID = userID.(int64)
-	if userID != nil {
+	userID := user.(*UserClaims).UserID
+	if userID != 0 {
 		user, err := h.Service.Profile(ctx, domain.User{
-			ID: userID.(int64),
+			ID: userID,
 		})
 		if err != nil {
 			ctx.String(200, "系统错误")
@@ -214,6 +216,7 @@ func (h *UserHandler) LoginJWT(ctx *gin.Context) {
 	claims := UserClaims{
 		RegisteredClaims: jwt.RegisteredClaims{},
 		UserID:           user.ID,
+		UserAgent:        ctx.Request.UserAgent(),
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS512, claims)
 	signedString, err := token.SignedString([]byte("abW5nQhlwukKm7gx/BfB2w=="))
@@ -222,6 +225,20 @@ func (h *UserHandler) LoginJWT(ctx *gin.Context) {
 		return
 	}
 	ctx.Header("x-jwt-token", signedString)
+
+	sess := sessions.Default(ctx)
+	sess.Set("userId", user.ID)
+	sess.Options(
+		sessions.Options{
+			Secure:   false,
+			HttpOnly: false,
+			MaxAge:   86400,
+		})
+	err = sess.Save()
+	if err != nil {
+		ctx.String(200, "系统错误")
+		return
+	}
 
 	ctx.String(200, "登录成功")
 	return
