@@ -22,14 +22,20 @@ import (
 )
 
 func main() {
-	db := InitDB()
-	server := InitWebServer()
+	//db := InitDB()
+	//server := InitWebServer()
 
 	// session
 
-	c := initUser(db)
+	//c := initUser(db)
 
-	c.RegisterRoutes(server)
+	//c.RegisterRoutes(server)
+
+	server := gin.Default()
+	server.GET("/hello", func(ctx *gin.Context) {
+		ctx.String(200, "hello")
+	})
+
 	err := server.Run(":8080")
 	if err != nil {
 		log.Panic(err)

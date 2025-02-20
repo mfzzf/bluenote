@@ -1,0 +1,18 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    name: bluenote
+spec:
+  selector:
+    matchLabels:
+      app: bluenote
+  template:
+    metadata:
+      labels:
+        app: bluenote
+    spec:
+      containers:
+      - name: bluenote
+        image: bluenote:v0.0.1
+        ports:
+        - containerPort: 8080
