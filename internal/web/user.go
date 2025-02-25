@@ -52,6 +52,7 @@ func (h *UserHandler) RegisterRoutes(server *gin.Engine) {
 	userGroup.POST("/signup", h.SignUp)
 	userGroup.POST("/login", h.LoginJWT)
 	userGroup.POST("/edit", h.Edit)
+	userGroup.POST("/logout", h.Logout)
 }
 
 func (h *UserHandler) Profile(ctx *gin.Context) {
