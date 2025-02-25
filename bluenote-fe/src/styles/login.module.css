@@ -1,0 +1,103 @@
+.loginContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #fff1f1 0%, #fff 100%);
+  padding: 20px;
+}
+
+.loginCard {
+  width: 100%;
+  max-width: 400px;
+  border: none;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(255, 71, 87, 0.07);
+  padding: 24px;
+  transition: transform 0.3s ease;
+}
+
+.loginCard:hover {
+  transform: translateY(-5px);
+}
+
+.headerContainer {
+  text-align: center;
+  margin-bottom: 36px;
+}
+
+.gradientTitle {
+  font-size: 32px;
+  font-weight: 600;
+  background: linear-gradient(135deg, #ff4757 0%, #ff6b81 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin: 0;
+}
+
+.subtitle {
+  color: #666;
+  margin-top: 8px;
+  font-size: 15px;
+}
+
+.formInput {
+  border-radius: 8px;
+  padding: 12px;
+  border: 1px solid #eaeaea;
+  transition: all 0.3s ease;
+}
+
+.formInput:hover, .formInput:focus {
+  border-color: #ff4757;
+  box-shadow: 0 0 0 2px rgba(255, 71, 87, 0.1);
+}
+
+.inputIcon {
+  color: #bbb;
+  margin-right: 8px;
+}
+
+.loginButton {
+  background: linear-gradient(135deg, #ff4757 0%, #ff6b81 100%);
+  border: none;
+  height: 48px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 500;
+  margin-top: 12px;
+  transition: all 0.3s ease;
+}
+
+.loginButton:hover, .loginButton:focus {
+  opacity: 0.9;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(255, 71, 87, 0.2);
+}
+
+.footerLinks {
+  text-align: center;
+  margin-top: 24px;
+  border-top: 1px solid #f0f0f0;
+  padding-top: 20px;
+}
+
+.normalLink {
+  color: #666;
+  transition: color 0.3s ease;
+}
+
+.normalLink:hover {
+  color: #ff4757;
+}
+
+.highlightLink {
+  color: #ff4757;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.highlightLink:hover {
+  opacity: 0.8;
+  text-decoration: underline;
+}

@@ -1,61 +1,46 @@
-import React from 'react';
-import { Button, Form, Input, Card, Space } from 'antd';
+import React, { useState } from 'react';
+import { Button, Form, Input, Card, Space, message, Spin } from 'antd';
+import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import axios from "@/axios/axios";
 import Link from "next/link";
 import router from "next/router";
-
-const onFinish = (values: any) => {
-    axios.post("/users/login", values)
-        .then((res) => {
-            if(res.status != 200) {
-                alert(res.statusText);
-                return
-            }
-            alert(res.data)
-            router.push('/users/profile')
-        }).catch((err) => {
-            alert(err);
-    })
-};
-
-const onFinishFailed = (errorInfo: any) => {
-    alert("输入有误")
-};
+import '../../styles/variables.css';
+import styles from '../../styles/login.module.css';
 
 const LoginForm: React.FC = () => {
+    const [loading, setLoading] = useState(false);
+    
+    const onFinish = async (values: any) => {
+        setLoading(true);
+        try {
+            const res = await axios.post("/users/login", values);
+            if (res.status === 200) {
+                message.success('登录成功');
+                router.push('/users/profile');
+            } else {
+                message.error(res.statusText || '登录失败');
+            }
+        } catch (err: any) {
+            message.error(err.message || '登录失败，请稍后再试');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const onFinishFailed = () => {
+        message.error("请检查输入信息");
+    };
+
     return (
-        <div style={{ 
-            display: 'flex', 
-            justifyContent: 'center', 
-            alignItems: 'center', 
-            minHeight: '100vh',
-            background: 'linear-gradient(135deg, #fff1f1 0%, #fff 100%)',
-            padding: '20px'
-        }}>
-            <Card 
-                className="redbook-card"
-                style={{ 
-                    width: '100%',
-                    maxWidth: 400,
-                    border: 'none'
-                }}
-            >
-                <div style={{
-                    textAlign: 'center',
-                    marginBottom: '30px'
-                }}>
-                    <h1 style={{
-                        fontSize: '28px',
-                        background: 'var(--background-gradient)',
-                        WebkitBackgroundClip: 'text',
-                        WebkitTextFillColor: 'transparent',
-                        margin: 0
-                    }}>欢迎回来</h1>
-                    <p style={{ color: '#666', marginTop: '8px' }}>登录你的账号</p>
+        <div className={styles.loginContainer}>
+            <Card className={styles.loginCard}>
+                <div className={styles.headerContainer}>
+                    <h1 className={styles.gradientTitle}>欢迎回来</h1>
+                    <p className={styles.subtitle}>登录你的账号</p>
                 </div>
                 
                 <Form
-                    name="basic"
+                    name="login"
                     layout="vertical"
                     onFinish={onFinish}
                     onFinishFailed={onFinishFailed}
@@ -63,10 +48,14 @@ const LoginForm: React.FC = () => {
                 >
                     <Form.Item
                         name="email"
-                        rules={[{ required: true, message: '请输入邮箱' }]}
+                        rules={[
+                            { required: true, message: '请输入邮箱' },
+                            { type: 'email', message: '请输入有效的邮箱地址' }
+                        ]}
                     >
                         <Input 
-                            className="redbook-input"
+                            prefix={<UserOutlined className={styles.inputIcon} />}
+                            className={styles.formInput}
                             placeholder="请输入邮箱"
                             size="large" 
                         />
@@ -77,28 +66,30 @@ const LoginForm: React.FC = () => {
                         rules={[{ required: true, message: '请输入密码' }]}
                     >
                         <Input.Password 
-                            className="redbook-input"
+                            prefix={<LockOutlined className={styles.inputIcon} />}
+                            className={styles.formInput}
                             placeholder="请输入密码"
                             size="large" 
                         />
                     </Form.Item>
 
                     <Form.Item style={{ marginBottom: '12px' }}>
-                        <Button className="redbook-button" type="primary" htmlType="submit" block>
+                        <Button 
+                            className={styles.loginButton} 
+                            type="primary" 
+                            htmlType="submit" 
+                            block
+                            loading={loading}
+                        >
                             登录
                         </Button>
                     </Form.Item>
 
-                    <div style={{ 
-                        textAlign: 'center',
-                        marginTop: '20px',
-                        borderTop: '1px solid #f0f0f0',
-                        paddingTop: '20px'
-                    }}>
-                        <Space size={30} style={{ color: '#666' }}>
-                            <Link href="/users/login_sms" style={{ color: '#666' }}>手机号登录</Link>
-                            <Link href="/users/login_wechat" style={{ color: '#666' }}>微信登录</Link>
-                            <Link href="/users/signup" style={{ color: 'var(--primary-color)' }}>注册账号</Link>
+                    <div className={styles.footerLinks}>
+                        <Space size={30}>
+                            <Link href="/users/login_sms" className={styles.normalLink}>手机号登录</Link>
+                            <Link href="/users/login_wechat" className={styles.normalLink}>微信登录</Link>
+                            <Link href="/users/signup" className={styles.highlightLink}>注册账号</Link>
                         </Space>
                     </div>
                 </Form>

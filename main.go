@@ -22,19 +22,19 @@ import (
 )
 
 func main() {
-	//db := InitDB()
-	//server := InitWebServer()
+	db := InitDB()
+	server := InitWebServer()
 
 	// session
 
-	//c := initUser(db)
+	c := initUser(db)
 
-	//c.RegisterRoutes(server)
+	c.RegisterRoutes(server)
 
-	server := gin.Default()
-	server.GET("/hello", func(ctx *gin.Context) {
-		ctx.String(200, "hello")
-	})
+	//server := gin.Default()
+	//server.GET("/hello", func(ctx *gin.Context) {
+	//	ctx.String(200, "hello")
+	//})
 
 	err := server.Run(":8080")
 	if err != nil {
@@ -58,7 +58,7 @@ func InitDB() *gorm.DB {
 func InitWebServer() *gin.Engine {
 	server := gin.Default()
 	server.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:3000"}, // 替换为前端地址
+		AllowOrigins:     []string{"http://localhost:3000", "http://192.168.31.97:3000", "http://192.168.0.2:3000"}, // Removed trailing slash
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
 		ExposeHeaders:    []string{"x-jwt-token"},
@@ -68,9 +68,13 @@ func InitWebServer() *gin.Engine {
 			if strings.Contains(origin, "localhost") {
 				return true
 			}
+			if strings.Contains(origin, "192") {
+				return true
+			}
 			return strings.Contains(origin, "yourcompany.com")
 		},
 	}))
+
 	store, err := redisSess.NewStore(16, "tcp", "localhost:6379", "", []byte("abW5nQhlwukKm7gx/BfB2w=="), []byte("ZaQqleZrLOznZnKsZdB5FQ=="))
 	if err != nil {
 		log.Panic(err)
