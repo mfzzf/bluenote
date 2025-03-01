@@ -20,6 +20,9 @@
 <script>
 export default {
   name: 'App',
+  created() {
+    document.title = 'BlueNote'
+  },
   computed: {
     isLoggedIn() {
       return this.$store.getters.isAuthenticated
